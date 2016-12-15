@@ -1,4 +1,4 @@
-.PHONY: all qemu clean iso
+.PHONY: all qemu clean iso cargo
 
 ASM = nasm
 CXX = g++
@@ -12,7 +12,6 @@ OBJDIR = ./build
 
 ASMFLAGS = -f elf64
 LDFLAGS = -n
-LDLIBS =
 
 KERNEL = $(OBJDIR)/system
 ISO = $(OBJDIR)/os.iso
@@ -22,7 +21,7 @@ QEMUCPUs = 4
 QEMUINITRD = /dev/null
 
 TARGET_TRIPLE = x84_64-unknown-linux-gnu
-RUST_LIB_DIR = ./target/$(TARGET_TRIPLE)/debug/
+RUST_LIB = ./target/$(TARGET_TRIPLE)/debug/librust_os.a
 
 all: $(QEMUKERNEL)
 
@@ -30,9 +29,12 @@ $(OBJDIR)/_%.o : boot/%.asm Makefile
 	@if test \( ! \( -d $(@D) \) \) ;then mkdir -p $(@D);fi
 	$(ASM) $(ASMFLAGS) -o $@ $<
 
-$(KERNEL): $(OBJPRE) Makefile
+cargo:
+	cargo build --target=$(TARGET_TRIPLE)
+
+$(KERNEL): cargo $(OBJPRE) Makefile
 	@if test \( ! \( -d $(@D) \) \) ;then mkdir -p $(@D);fi
-	$(LD) -T $(SECTIONS) -o $(KERNEL) $(LDFLAGS) $(OBJPRE) $(LDLIBS)
+	$(LD) -T $(SECTIONS) -o $(KERNEL) $(LDFLAGS) $(OBJPRE) $(RUST_LIB)
 
 iso: $(ISO)
 
