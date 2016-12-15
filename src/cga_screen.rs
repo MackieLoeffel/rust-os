@@ -2,25 +2,13 @@ use core::fmt;
 use spin::Mutex;
 
 #[allow(dead_code)]
-mod color {
-    pub const BLACK: u8 = 0;
-    pub const BLUE: u8 = 1;
-    pub const GREEN: u8 = 2;
-    pub const CYAN: u8 = 3;
-    pub const RED: u8 = 4;
-    pub const MAGENTA: u8 = 5;
-    pub const BROWN: u8 = 6;
-    pub const LIGHT_GREY: u8 = 7;
-    pub const DARKGREY: u8 = 8;
-    pub const LIGHTBLUE: u8 = 9;
-    pub const LIGHTGREEN: u8 = 10;
-    pub const LIGHTCYAN: u8 = 11;
-    pub const LIGHTRED: u8 = 12;
-    pub const LIGHTMAGENTA: u8 = 13;
-    pub const YELLOW: u8 = 14;
-    pub const WHITE: u8 = 15;
+pub enum Color {
+    Black = 0, Blue, Green, Cyan,
+    Red, Magenta, Brown, LightGrey,
+    Darkgrey, Lightblue, Lightgreen, Lightcyan,
+    Lightred, Lightmagenta, Yellow, White,
 }
-const STD_ATTR: u8 = ((color::BLACK & 0x7) << 4) | (color::LIGHT_GREY & 0xf);
+const STD_ATTR: u8 = build_color(Color::LightGrey, Color::Black);
 
 const CGA_START: u64 = 0xb8000;
 pub const COLUMNS: u64 = 80;
@@ -42,17 +30,16 @@ macro_rules! print {
 pub struct CGAScreen {
     from_col: u64, from_row: u64,
     size_x: u64, size_y: u64,
-    cursor_x: u64, cursor_y: u64
+    cursor_x: u64, cursor_y: u64,
+    color: u8
 }
 
 impl CGAScreen {
     const fn new_const(from_col: u64, from_row: u64, size_x: u64, size_y: u64) -> CGAScreen {
-        // assert!(from_col + size_x <= COLUMNS);
-        // assert!(from_row + size_y <= ROWS);
-
         CGAScreen{from_col: from_col, from_row: from_row,
                   size_x: size_x, size_y: size_y,
-                  cursor_x: 0, cursor_y: 0}
+                  cursor_x: 0, cursor_y: 0,
+                  color: STD_ATTR}
     }
 
     #[allow(dead_code)]
@@ -63,17 +50,13 @@ impl CGAScreen {
     }
 
     pub fn show(&mut self, x: u64, y: u64, b: u8) {
-        self.show_attr(x, y, b, STD_ATTR)
-    }
-
-    pub fn show_attr(&mut self, x: u64, y: u64, b: u8, attr: u8) {
         assert!(x < self.size_x);
         assert!(y < self.size_y);
         let offset = ((y + self.from_row) * COLUMNS + (x + self.from_col)) * 2;
         let addr = CGA_START + offset;
         unsafe {
             *(addr as *mut _) = b;
-            *((addr + 1) as *mut _) = attr;
+            *((addr + 1) as *mut _) = self.color;
         }
     }
 
@@ -110,26 +93,41 @@ impl CGAScreen {
     }
 
     pub fn scroll_down(&mut self, amount: u64) {
+        let old_color = self.color;
         for crow in 0..self.size_y {
             for ccol in 0..self.size_x {
                 if crow < self.size_y - amount {
                     let (character, attr) = self.get(ccol, crow + amount);
-                    self.show_attr(ccol, crow, character, attr);
+                    self.color = attr;
+                    self.show(ccol, crow, character);
                 } else {
                     self.show(ccol, crow, b' ');
                 }
             }
         }
+        self.color = old_color;
+    }
+
+    pub fn set_pos(&mut self, x: u64, y: u64) {
+        assert!(x < self.size_x);
+        assert!(y < self.size_y);
+        self.cursor_x = x;
+        self.cursor_y = y;
     }
 
     pub fn clear(&mut self) {
         let y = self.size_y;
         self.scroll_down(y);
+        self.set_pos(0, 0);
     }
 
     pub fn print(&mut self, args: fmt::Arguments) {
         use core::fmt::Write;
         self.write_fmt(args).unwrap();
+    }
+
+    pub fn set_color(&mut self, fg: Color, bg: Color) {
+        self.color = build_color(fg, bg);
     }
 }
 
@@ -140,4 +138,8 @@ impl fmt::Write for CGAScreen {
         }
         Ok(())
     }
+}
+
+const fn build_color(fg: Color, bg: Color) -> u8 {
+    ((bg as u8 & 0x7) << 4) | (fg as u8 & 0xf)
 }
