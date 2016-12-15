@@ -13,10 +13,11 @@ use core::fmt::Write;
 #[no_mangle]
 pub extern fn rust_main() {
 
-    cga_screen::clear();
+    let mut screen = cga_screen::SCREEN.lock();
+    screen.clear();
 
     for i in 0..100 {
-        println!("Hallo {}!", i);
+        println!(screen, "Hallo {}!", i);
         // write!(&mut screen, "Hallo {}!\n", i).unwrap();
     }
 
@@ -25,8 +26,7 @@ pub extern fn rust_main() {
 
 #[lang = "eh_personality"]
 #[no_mangle]
-pub extern fn rust_eh_personality() {
-}
+pub extern fn rust_eh_personality() { }
 
 struct AssertWriter {
     line: u64, pos: u64

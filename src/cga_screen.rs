@@ -2,13 +2,25 @@ use core::fmt;
 use spin::Mutex;
 
 #[allow(dead_code)]
-pub enum Color {
-      Black = 0, Blue, Green, Cyan,
-      Red, Magenta, Brown, LightGrey,
-      DarkGrey, LightBlue, LightGreen, LightCyan,
-      LightRed, LightMagenta, Yellow, White
+mod color {
+    pub const BLACK: u8 = 0;
+    pub const BLUE: u8 = 1;
+    pub const GREEN: u8 = 2;
+    pub const CYAN: u8 = 3;
+    pub const RED: u8 = 4;
+    pub const MAGENTA: u8 = 5;
+    pub const BROWN: u8 = 6;
+    pub const LIGHT_GREY: u8 = 7;
+    pub const DARKGREY: u8 = 8;
+    pub const LIGHTBLUE: u8 = 9;
+    pub const LIGHTGREEN: u8 = 10;
+    pub const LIGHTCYAN: u8 = 11;
+    pub const LIGHTRED: u8 = 12;
+    pub const LIGHTMAGENTA: u8 = 13;
+    pub const YELLOW: u8 = 14;
+    pub const WHITE: u8 = 15;
 }
-const STD_ATTR: u8 = ((Color::Black as u8 & 0x7) << 4) | (Color::LightGrey as u8 & 0xf);
+const STD_ATTR: u8 = ((color::BLACK & 0x7) << 4) | (color::LIGHT_GREY & 0xf);
 
 const CGA_START: u64 = 0xb8000;
 pub const COLUMNS: u64 = 80;
@@ -17,23 +29,14 @@ pub const ROWS: u64 = 25;
 pub static SCREEN: Mutex<CGAScreen> = Mutex::new(CGAScreen::new_const(0, 0, COLUMNS, ROWS));
 
 macro_rules! println {
-    ($fmt:expr) => (print!(concat!($fmt, "\n")));
-    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+    ($screen:expr, $fmt:expr) => (print!($screen, concat!($fmt, "\n")));
+    ($screen:expr, $fmt:expr, $($arg:tt)*) => (print!($screen, concat!($fmt, "\n"), $($arg)*));
 }
 
 macro_rules! print {
-    ($($arg:tt)*) => ({
-        $crate::cga_screen::print(format_args!($($arg)*));
+    ($screen:expr, $($arg:tt)*) => ({
+        $screen.print(format_args!($($arg)*));
     });
-}
-
-pub fn print(args: fmt::Arguments) {
-    use core::fmt::Write;
-    SCREEN.lock().write_fmt(args).unwrap();
-}
-
-pub fn clear() {
-    SCREEN.lock().clear();
 }
 
 pub struct CGAScreen {
@@ -122,6 +125,11 @@ impl CGAScreen {
     pub fn clear(&mut self) {
         let y = self.size_y;
         self.scroll_down(y);
+    }
+
+    pub fn print(&mut self, args: fmt::Arguments) {
+        use core::fmt::Write;
+        self.write_fmt(args).unwrap();
     }
 }
 
