@@ -5,9 +5,14 @@ extern crate rlibc;
 
 #[no_mangle]
 pub extern fn rust_main() {
-    let x = ["Hello", "World", "!"];
-    let y = x;
-     let test = (0..3).flat_map(|x| 0..x).zip(0..);
+    let hello = b"Hello world!";
+    let color_byte = 0x1b;
+    let mut hello_bytes = [color_byte; 24];
+    for (i, c) in hello.iter().enumerate() {
+        hello_bytes[i * 2] = *c;
+    }
+    let cga = (0xb8000 + 1988) as *mut _;
+    unsafe { *cga = hello_bytes; }
 }
 
 #[lang = "eh_personality"]
