@@ -1,3 +1,3 @@
 #!/bin/bash
 
-make qemu
+CARGO_FLAGS=--color=never make qemu
