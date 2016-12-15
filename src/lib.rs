@@ -23,6 +23,7 @@ pub extern fn rust_main() {
 
     keyboard.init();
     screen.clear();
+    println!(screen, "Booted!");
 
     loop {
         let key = keyboard.key_hit();
@@ -58,15 +59,6 @@ pub extern fn rust_main() {
             println!(screen, "***  SPCMDCON.SYS - Address FBFE7617 base at FBFE5000, DateStamp 3d6dd67c");
         }
     }
-
-    for i in 0..100 {
-        println!(screen, "Hallo {}!", i);
-        if i == 50 {
-            screen.set_color(Color::Cyan, Color::Black);
-        }
-    }
-
-    loop {}
 }
 
 #[lang = "eh_personality"]
