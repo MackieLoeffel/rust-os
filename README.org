@@ -1,0 +1,3 @@
+* Rust-OS
+  Ein kleines Betriebssystem in Rust, um ein besseres Verständnis
+  sowohl von Betriebssystemen als auch von Rust zu bekommen.
