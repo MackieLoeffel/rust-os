@@ -9,10 +9,10 @@ OBJPRE = $(addprefix $(OBJDIR)/,$(ASM_OBJECTS))
 STARTUP_OBJECT = $(OBJDIR)/_startup.o
 OBJDIR = ./build
 
-ASMFLAGS = -f elf
-LDFLAGS = -melf_i386
-LDHEAD = $(shell g++ -m32 --print-file-name=crti.o && g++ -m32 --print-file-name=crtbegin.o)
-LDTAIL = $(shell g++ -m32 --print-file-name=crtend.o && g++ -m32 --print-file-name=crtn.o)
+ASMFLAGS = -f elf64
+LDFLAGS =
+LDHEAD =
+LDTAIL =
 LDLIBS =
 
 QEMUKERNEL = $(OBJDIR)/system
@@ -30,7 +30,7 @@ $(OBJDIR)/_%.o : boot/%.asm Makefile
 
 $(QEMUKERNEL): $(STARTUP_OBJECT) $(OBJPRE) Makefile
 	@if test \( ! \( -d $(@D) \) \) ;then mkdir -p $(@D);fi
-	$(LD) -e startup -T boot/sections.ld -o $(QEMUKERNEL) $(LDFLAGS) $(STARTUP_OBJECT) $(LDHEAD) $(OBJPRE) $(LDTAIL) $(LDLIBS)
+	$(LD) -T boot/sections.ld -o $(QEMUKERNEL) $(LDFLAGS) $(STARTUP_OBJECT) $(LDHEAD) $(OBJPRE) $(LDTAIL) $(LDLIBS)
 
 qemu: all
 	$(QEMU) -kernel $(QEMUKERNEL) -initrd $(QEMUINITRD) -k en-us -smp $(QEMUCPUs)

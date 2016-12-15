@@ -1,3 +1,5 @@
 * Rust-OS
   Ein kleines Betriebssystem in Rust, um ein besseres Verständnis
   sowohl von Betriebssystemen als auch von Rust zu bekommen.
+** Quellen
+   - http://os.phil-opp.com/
