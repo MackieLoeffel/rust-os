@@ -36,7 +36,7 @@ cargo: $(RUST_LIB)
 $(RUST_LIB): $(RUST_SOURCES)
 	cargo build $(CARGO_FLAGS) --target=$(TARGET_TRIPLE)
 
-$(KERNEL): $(RUST_LIB) $(OBJPRE) Makefile
+$(KERNEL): $(RUST_LIB) $(OBJPRE) Makefile $(SECTIONS)
 	@if test \( ! \( -d $(@D) \) \) ;then mkdir -p $(@D);fi
 	$(LD) --gc-sections -T $(SECTIONS) -o $(KERNEL) $(LDFLAGS) $(OBJPRE) $(RUST_LIB)
 

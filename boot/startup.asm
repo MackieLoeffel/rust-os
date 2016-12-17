@@ -20,6 +20,7 @@ section .text
 bits 32
 startup:
     mov esp, stack_top
+    mov edi, ebx                ; save Multiboot info pointer
 
     call check_multiboot
     call check_cpuid

@@ -23,7 +23,7 @@ static NORMAL_TAB: [u8; 89] = [
 fn hooks(code: u8) {
     // low level keyboard hooks
     match code {
-        1 => power::shutdown(),
+        1 => power::shutdown(), // shutdown on ESC
         _ => {}
     }
 }

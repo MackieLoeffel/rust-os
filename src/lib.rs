@@ -3,6 +3,7 @@
 
 extern crate rlibc;
 extern crate spin;
+extern crate multiboot2;
 
 #[macro_use]
 mod cga_screen;
@@ -10,16 +11,19 @@ mod io_port;
 mod keyboard;
 mod power;
 mod misc;
+mod memory;
 
 use cga_screen::{SCREEN, CGAScreen, ROWS, COLUMNS};
 use keyboard::{KEYBOARD};
 use misc::windows;
+use memory::FrameAllocator;
 
 use core::fmt;
 use core::fmt::Write;
 
 #[no_mangle]
-pub extern fn rust_main() {
+pub extern fn rust_main(multiboot_info_address: usize) {
+    let multiboot_info = unsafe {multiboot2::load(multiboot_info_address)};
 
     {
         let mut whole_screen = CGAScreen::new(0, 0, COLUMNS, ROWS);
@@ -31,14 +35,42 @@ pub extern fn rust_main() {
 
     keyboard.init();
     screen.clear();
-    println!(screen, "Booted!");
 
+    let memory_map_tag = multiboot_info.memory_map_tag()
+        .expect("expected memory map tag");
+    println!(screen, "memory areas:");
+    for area in memory_map_tag.memory_areas() {
+        println!(screen, "    start {:#x}, length: {:#x}",
+                 area.base_addr, area.length);
+    }
+    let elf_sections_tag = multiboot_info.elf_sections_tag()
+        .expect("Elf-sections tag required");
+    let kernel_start = elf_sections_tag.sections().map(|s| s.addr).min().unwrap();
+    let kernel_end = elf_sections_tag.sections().map(|s| s.addr + s.size).max().unwrap();
+    let multiboot_start = multiboot_info_address;
+    let multiboot_end = multiboot_info_address + (multiboot_info.total_size as usize);
+
+    println!(screen, "kernel: start {:#x}, end: {:#x}", kernel_start, kernel_end);
+    println!(screen, "multiboot: start {:#x}, end: {:#x}", multiboot_start, multiboot_end);
+    let mut allocator = memory::RangeAllocator::new(memory_map_tag.memory_areas(),
+                                            kernel_start as usize, kernel_end as usize,
+                                            multiboot_start, multiboot_end);
+
+    let new_page = allocator.alloc().unwrap();
+    println!(screen, "First Page: {:?}", new_page);
+    for i in 0.. {
+        if let None = allocator.alloc() {
+            println!(screen, "allocated {} frames", i);
+            break;
+        }
+    }
     loop {
         let key = keyboard.key_hit();
         if !key.valid() {continue;}
         println!(screen, "Key {}", key.ascii());
 
         if key.ascii() == 'q' {
+            power::shutdown();
             windows();
         }
     }
