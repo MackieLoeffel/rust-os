@@ -14,7 +14,8 @@ const CGA_START: u64 = 0xb8000;
 pub const COLUMNS: u64 = 80;
 pub const ROWS: u64 = 25;
 
-pub static SCREEN: Mutex<CGAScreen> = Mutex::new(CGAScreen::new_const(0, 0, COLUMNS, ROWS));
+pub static DBG: Mutex<CGAScreen> = Mutex::new(CGAScreen::new_const(0, 0, COLUMNS, 2));
+pub static SCREEN: Mutex<CGAScreen> = Mutex::new(CGAScreen::new_const(0, 2, COLUMNS, ROWS - 2));
 
 macro_rules! println {
     ($screen:expr, $fmt:expr) => (print!($screen, concat!($fmt, "\n")));
@@ -25,6 +26,19 @@ macro_rules! print {
     ($screen:expr, $($arg:tt)*) => ({
         $screen.print(format_args!($($arg)*));
     });
+}
+
+macro_rules! dbg {
+    ($($arg:tt)*) => ({
+        $crate::cga_screen::dbg(format_args!($($arg)*));
+    });
+}
+
+#[allow(dead_code)]
+pub fn dbg(args: fmt::Arguments) {
+    let mut d = DBG.lock();
+    d.write_byte(b'\n');
+    d.print(args);
 }
 
 pub struct CGAScreen {

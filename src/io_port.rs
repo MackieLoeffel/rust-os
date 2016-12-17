@@ -15,6 +15,15 @@ impl IOPort {
         }
     }
 
+    pub fn outw(&self, val: u16) {
+        unsafe {
+            asm!("outw %ax, %dx"
+                 :
+                 :"{al}"(val), "{dx}"(self.address)
+                 :);
+        }
+    }
+
     pub fn inb(&self) -> u8 {
         let result: u8;
         unsafe {

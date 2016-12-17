@@ -1,5 +1,6 @@
 use io_port::{IOPort};
 use spin::Mutex;
+use power;
 
 static CTRL_PORT: IOPort = IOPort::new(0x64);
 static DATA_PORT: IOPort = IOPort::new(0x60);
@@ -18,6 +19,14 @@ static NORMAL_TAB: [u8; 89] = [
     b'*', 0, b' ', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, b'-',
     0, 0, 0, b'+', 0, 0, 0, 0, 0, 0, 0, b'<', 0, 0
 ];
+
+fn hooks(code: u8) {
+    // low level keyboard hooks
+    match code {
+        1 => power::shutdown(),
+        _ => {}
+    }
+}
 
 pub static KEYBOARD: Mutex<Keyboard> = Mutex::new(Keyboard {initialized: false, prefix: 0, gather: Key::invalid()});
 
@@ -69,6 +78,7 @@ impl Keyboard {
         }
 
         let mut done = false;
+        hooks(code);
         match code {
             42 | 54 => {} // TODO: shift
             56 => {} // TODO: alt left right
@@ -131,7 +141,9 @@ impl Key {
 
     pub fn ascii(&self) -> char {
         assert!(self.valid);
-        assert!(self.ascii < 128);
+        if self.ascii >= 128 {
+            return '?';
+        }
         self.ascii.into()
     }
 
