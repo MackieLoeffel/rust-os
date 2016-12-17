@@ -1,5 +1,12 @@
 * Rust-OS
-  Ein kleines Betriebssystem in Rust, um ein besseres Verständnis
-  sowohl von Betriebssystemen als auch von Rust zu bekommen.
-** Quellen
+  A small operatng system in Rust. I wrote this to get a better
+  understanding of operating systems and Rust.
+
+  This project started as part of a 24h sprint at Senacor.
+** Sources
    - http://os.phil-opp.com/
+   - https://www4.cs.fau.de/Lehre/WS16/V_BS/Uebungen/
+** Todos
+   - [ ] Add modifier keys to keyboard
+   - [ ] look into syscalls
+   - [ ] add applications
