@@ -1,9 +1,11 @@
-#![feature(lang_items, const_fn, asm)]
+#![feature(lang_items, const_fn, asm, unique)]
 #![no_std]
 
 extern crate rlibc;
 extern crate spin;
 extern crate multiboot2;
+#[macro_use]
+extern crate bitflags;
 
 #[macro_use]
 mod cga_screen;
@@ -17,6 +19,7 @@ use cga_screen::{SCREEN, CGAScreen, ROWS, COLUMNS};
 use keyboard::{KEYBOARD};
 use misc::windows;
 use memory::FrameAllocator;
+use memory::PAGE_TABLE;
 
 use core::fmt;
 use core::fmt::Write;
@@ -32,6 +35,7 @@ pub extern fn rust_main(multiboot_info_address: usize) {
 
     let mut screen = SCREEN.lock();
     let mut keyboard = KEYBOARD.lock();
+    let mut page_table = PAGE_TABLE.lock();
 
     keyboard.init();
     screen.clear();
@@ -56,14 +60,11 @@ pub extern fn rust_main(multiboot_info_address: usize) {
                                             kernel_start as usize, kernel_end as usize,
                                             multiboot_start, multiboot_end);
 
-    let new_page = allocator.alloc().unwrap();
-    println!(screen, "First Page: {:?}", new_page);
-    for i in 0.. {
-        if let None = allocator.alloc() {
-            println!(screen, "allocated {} frames", i);
-            break;
-        }
-    }
+    let new_frame = allocator.alloc().unwrap();
+    println!(screen, "First Frame: {:?}", new_frame);
+
+    memory::test_paging(&mut screen, &mut page_table, &mut allocator);
+
     loop {
         let key = keyboard.key_hit();
         if !key.valid() {continue;}

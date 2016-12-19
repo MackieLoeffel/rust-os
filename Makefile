@@ -33,7 +33,7 @@ $(OBJDIR)/_%.o : boot/%.asm Makefile
 
 cargo: $(RUST_LIB)
 
-$(RUST_LIB): $(RUST_SOURCES)
+$(RUST_LIB): $(RUST_SOURCES) Cargo.toml
 	cargo build $(CARGO_FLAGS) --target=$(TARGET_TRIPLE)
 
 $(KERNEL): $(RUST_LIB) $(OBJPRE) Makefile $(SECTIONS)

@@ -42,11 +42,11 @@ startup:
 setup_page_tables:
     ;; create pages
     mov eax, p3_table
-    or eax, 0b11                ; present & writeable
+    or eax, 0b1000000011        ; used & present & writeable
     mov [p4_table], eax
 
     mov eax, p2_table
-    or eax, 0b11                ; present & writeable
+    or eax, 0b1000000011        ; used & present & writeable
     mov [p3_table], eax
 
     ;;  map each p2 entry to a huge page 2 MiB page
@@ -54,12 +54,17 @@ setup_page_tables:
 .map_p2_table:
     mov eax, 0x200000
     mul ecx
-    or eax, 0b10000011          ; present + writable + huge
+    or eax, 0b1010000011        ; used & present 6 writable & huge
     mov [p2_table + ecx * 8], eax
 
     inc ecx
     cmp ecx, 512
     jne .map_p2_table
+
+    ;; map p4 recursively, as described here: http://os.phil-opp.com/modifying-page-tables.html#recursive-mapping
+    mov eax, p4_table
+    or eax, 0b1000000011        ; used & present & writable
+    mov [p4_table + 511 * 8], eax
 
     ret
 
@@ -186,7 +191,7 @@ p3_table:
 p2_table:
     resb 4096
 stack_bottom:
-    resb 4096
+    resb 4096 * 8
 stack_top:
 
 section .rodata
