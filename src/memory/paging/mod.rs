@@ -2,9 +2,10 @@ pub use self::table::PAGE_TABLE;
 
 mod entry;
 mod table;
+mod temporary_page;
 
 use self::entry::EntryFlags;
-use memory::{FrameAllocator, FRAME_SIZE};
+use memory::{FrameAllocator, FRAME_SIZE, Frame};
 use self::table::{PageTable};
 
 // must be the same
@@ -31,6 +32,17 @@ impl Page {
     fn p1_index(&self) -> usize { (self.number >> 0) & 0o777 }
 
     fn start_address(&self) -> usize { self.number * PAGE_SIZE }
+}
+
+pub struct InactivePageTable {
+    p4_frame: Frame,
+}
+
+impl InactivePageTable {
+    pub fn new(frame: Frame) -> InactivePageTable {
+        // TODO zero and map the page
+        InactivePageTable {p4_frame: frame}
+    }
 }
 
 use cga_screen::CGAScreen;
