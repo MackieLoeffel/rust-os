@@ -3,10 +3,14 @@ pub use self::table::PAGE_TABLE;
 mod entry;
 mod table;
 mod temporary_page;
+mod mapper;
 
+use multiboot2::BootInformation;
 use self::entry::EntryFlags;
+use self::entry::{PRESENT, WRITABLE};
 use memory::{FrameAllocator, FRAME_SIZE, Frame};
 use self::table::{PageTable};
+use self::temporary_page::{TemporaryPage};
 
 // must be the same
 pub const PAGE_SIZE: usize = FRAME_SIZE;
@@ -39,10 +43,58 @@ pub struct InactivePageTable {
 }
 
 impl InactivePageTable {
-    pub fn new(frame: Frame) -> InactivePageTable {
-        // TODO zero and map the page
+    pub fn new(frame: Frame,
+               active_table: &mut PageTable,
+               temporary_page: &mut TemporaryPage) -> InactivePageTable {
+        {
+            let table = temporary_page.map_table_frame(frame.clone(), active_table);
+            table.zero();
+            // setup recursive mapping
+            table[511].set(frame.clone(), PRESENT | WRITABLE);
+        }
+        temporary_page.unmap(active_table);
+
         InactivePageTable {p4_frame: frame}
     }
+}
+
+pub fn remap_the_kernel<A>(active_table: &mut PageTable,
+                           allocator: &mut A,
+                           boot_info: &BootInformation)
+    where A: FrameAllocator
+{
+    let tmp_page_page = Page::containing_address(0xcafebabe);
+    assert!(active_table.translate_page(tmp_page_page.clone()).is_none());
+    let mut tmp_page = TemporaryPage::new(tmp_page_page, allocator);
+
+    // we leak one frame here, but we don't care
+    let tmp_frame = allocator.alloc().expect("out of memory");
+    let mut new_page_table = InactivePageTable::new(tmp_frame, active_table, &mut tmp_page);
+
+    active_table.with(&mut new_page_table, &mut tmp_page, |mapper| {
+        let elf_sections_tag = boot_info.elf_sections_tag()
+            .expect("expected elf sections tag");
+
+        for section in elf_sections_tag.sections() {
+
+            if !section.is_allocated() {
+                continue;
+            }
+
+            assert!(section.start_address() % PAGE_SIZE == 0,
+                    "sections must be page aligned");
+
+            println!("")
+
+            for frame in Frame::range_inclusive(
+                Frame::containing_address(section.start_address()),
+                // end address is exclusive
+                Frame::containing_address(section.end_address() - 1)
+            ) {
+                mapper.identity_map(frame, WRITABLE, allocator);
+            }
+        }
+    });
 }
 
 use cga_screen::CGAScreen;
@@ -70,7 +122,7 @@ pub fn test_paging<A>(screen: &mut CGAScreen, page_table: &mut PageTable, alloca
     page_table.map(Page::containing_address(addr2), EntryFlags::empty(), allocator);
     println!(screen, "translate {}, Some = {:?}", addr2, page_table.translate(addr2));
     let addr3 = addr2 + PAGE_SIZE;
-    page_table.identity_map(Page::containing_address(addr3), EntryFlags::empty(), allocator);
+    page_table.identity_map(Frame::containing_address(addr3), EntryFlags::empty(), allocator);
     println!(screen, "translate {}, Some = {:?}", addr3, page_table.translate(addr3));
 
     // map to the same frame

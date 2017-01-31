@@ -1,4 +1,5 @@
 use super::{Page, PageTable, VirtualAddress};
+use super::table::{Table, Level1};
 use memory::{Frame, FrameAllocator};
 
 pub struct TemporaryPage {
@@ -7,6 +8,14 @@ pub struct TemporaryPage {
 }
 
 impl TemporaryPage {
+    pub fn new<A>(page: Page, allocator: &mut A) -> TemporaryPage
+        where A: FrameAllocator {
+        TemporaryPage {
+            page: page,
+            allocator: TinyAllocator::new(allocator),
+        }
+    }
+
     pub fn map(&mut self, frame: Frame, active_table: &mut PageTable) -> VirtualAddress {
         use super::entry::WRITABLE;
 
@@ -19,10 +28,25 @@ impl TemporaryPage {
     pub fn unmap(&mut self, active_table: &mut PageTable) {
         active_table.unmap(self.page, &mut self.allocator);
     }
+
+    // maps the page on the frame and interprets it as a Level1 Table
+    pub fn map_table_frame(&mut self,
+                           frame: Frame,
+                           active_table: &mut PageTable) -> &mut Table<Level1> {
+        unsafe { &mut *(self.map(frame, active_table) as *mut Table<Level1>) }
+    }
 }
 
 // one for P3, P2 and P1
 struct TinyAllocator([Option<Frame>; 3]);
+
+impl TinyAllocator {
+    pub fn new<A>(a: &mut A) -> TinyAllocator where A: FrameAllocator{
+        // TODO free these pages in drop
+        let mut f = || a.alloc();
+        TinyAllocator([f(), f(), f()])
+    }
+}
 
 impl FrameAllocator for TinyAllocator {
     fn alloc(&mut self) -> Option<Frame> {

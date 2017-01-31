@@ -23,16 +23,37 @@ impl Frame {
         Frame {number: self.number + 1}
     }
 
-    fn start_address(&self) -> PhysicalAddress {
+    pub fn start_address(&self) -> PhysicalAddress {
         self.number * FRAME_SIZE
     }
 
     fn clone(&self) -> Frame {
         Frame {number: self.number}
     }
+
+    fn range_inclusive(start: Frame, end: Frame) -> FrameRangeInclusiveIter {
+        FrameRangeInclusiveIter {current: start, end: end}
+    }
 }
 
 pub trait FrameAllocator {
     fn alloc(&mut self) -> Option<Frame>;
     fn free(&mut self, frame: Frame);
+}
+
+struct FrameRangeInclusiveIter {
+    current: Frame, end: Frame
+}
+
+impl Iterator for FrameRangeInclusiveIter {
+    type Item = Frame;
+
+    fn next(&mut self) -> Option<Frame> {
+        if self.current.number > self.end.number {
+            return None;
+        }
+        let next = self.current.clone();
+        self.current = self.current.next();
+        Some(next)
+    }
 }
